@@ -918,7 +918,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
      */
     @Override
     Icon getIcon() {
-        return new Icon(path:"solidserver.svg", darkPath: "solidserver-dark.svg")
+        return new Icon(path:"efficientIP140-black.svg", darkPath: "efficientIP140-white.svg")
     }
 
     /**
