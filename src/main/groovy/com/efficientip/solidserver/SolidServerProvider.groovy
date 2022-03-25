@@ -793,7 +793,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                     networkPoolIp = morpheus.network.pool.poolIp.create(networkPoolIp)?.blockingGet()
                 }
                 if (createARecord && domain) {
-                    def domainRecord = new NetworkDomainRecord(networkDomain: domain, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A')
+                    def domainRecord = new NetworkDomainRecord(networkDomain: domain,ttl:3600, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A',content: networkPoolIp.ipAddress)
                     createRecord(poolServer.integration,domainRecord,[:])
                 }
 
