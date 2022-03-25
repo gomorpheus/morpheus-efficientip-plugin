@@ -794,7 +794,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 }
                 if (createARecord && domain) {
                     def domainRecord = new NetworkDomainRecord(networkDomain: domain, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A')
-                    createRecord(poolServer.integration,domainRecord)
+                    createRecord(poolServer.integration,domainRecord,[:])
                 }
 
                 return ServiceResponse.success(networkPoolIp)
