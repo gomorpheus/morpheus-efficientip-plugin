@@ -793,16 +793,8 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                     networkPoolIp = morpheus.network.pool.poolIp.create(networkPoolIp)?.blockingGet()
                 }
                 if (createARecord && domain) {
-                    def aliasQueryParams = [ip_id: networkPoolIp.externalId, ip_name: networkPoolIp.hostname]
-                    def ipAliasAddResults = client.callJsonApi(serviceUrl, ipAliasAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
-                            queryParams: aliasQueryParams), 'POST')
-                    if(ipAliasAddResults) {
-                        def domainRecord = new NetworkDomainRecord(networkDomain: domain, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A', externalId: ipAliasAddResults.data?.first().ret_oid)
-                        domainRecord.content = networkPoolIp.ipAddress
-                        morpheus.network.domain.record.create(domainRecord).blockingGet()
-                        networkPoolIp.internalId = ipAliasAddResults.data?.first().ret_oid
-                        networkPoolIp = morpheus.network.pool.poolIp.save(networkPoolIp)?.blockingGet()
-                    }
+                    def domainRecord = new NetworkDomainRecord(networkDomain: domain, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A')
+                    createRecord(poolServer.integration,domainRecord)
                 }
 
                 return ServiceResponse.success(networkPoolIp)
