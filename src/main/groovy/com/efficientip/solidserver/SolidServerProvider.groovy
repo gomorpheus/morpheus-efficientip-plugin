@@ -79,24 +79,29 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
 
         try {
             if(integration) {
-
                 def fqdn = record.name
                 if(!record.name.endsWith(record.networkDomain.name)) {
                     fqdn = "${record.name}.${record.networkDomain.name}"
                 }
 
+                //first see if it auto synced from a pool creation
+                def listResults = listDnsResourceRecords(client,poolServer,opts + [queryParams:[WHERE:"dnszone_id=${record.networkDomain.externalId} and value1='${record.content}'".toString()]])
 
-
-
-                def addQueryParams = [rr_name: fqdn.toString(), rr_type: record.type, value1: record.content, ttl: record.ttl?.toString(), dns_id: record.networkDomain.configuration, dns_zone_id: record.networkDomain.externalId]
-                log.info("Add DNS Query Params ${addQueryParams}")
-                def results = client.callJsonApi(poolServer.serviceUrl, dnsRRAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl,queryParams: addQueryParams), 'POST')
-
-
-                log.info("createRecord results: ${results}")
-                if(results.success) {
-                    record.externalId = results.data?.first()?.ret_oid
+                if(listResults.success && listResults.data) {
+                    def existingRecord = listResults.data.first()
+                    record.externalId = existingRecord.rr_id
                     return new ServiceResponse<NetworkDomainRecord>(true,null,null,record)
+                } else {
+                    def addQueryParams = [rr_name: fqdn.toString(), rr_type: record.type, value1: record.content, ttl: record.ttl?.toString(), dns_id: record.networkDomain.configuration, dns_zone_id: record.networkDomain.externalId]
+                    log.info("Add DNS Query Params ${addQueryParams}")
+                    def results = client.callJsonApi(poolServer.serviceUrl, dnsRRAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl,queryParams: addQueryParams), 'POST')
+
+
+                    log.info("createRecord results: ${results}")
+                    if(results.success) {
+                        record.externalId = results.data?.first()?.ret_oid
+                        return new ServiceResponse<NetworkDomainRecord>(true,null,null,record)
+                    }
                 }
             } else {
                 log.warn("no integration")
@@ -744,6 +749,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             def addQueryParams = [add_flag:'new_only', name: hostname.toString(), site_id: networkPool.configuration]
             def ipAddResults = null
             if(networkPoolIp.ipAddress) {
+                addQueryParams.hostaddr = networkPoolIp.ipAddress
                 ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                         queryParams: addQueryParams), 'POST')
 
@@ -794,7 +800,10 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 }
                 if (createARecord && domain) {
                     def domainRecord = new NetworkDomainRecord(networkDomain: domain,ttl:3600, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A',content: networkPoolIp.ipAddress)
-                    createRecord(poolServer.integration,domainRecord,[:])
+                    def createRecordResults = createRecord(poolServer.integration,domainRecord,[:])
+                    if(createRecordResults.success) {
+                        morpheus.network.domain.record.create(createRecordResults.data).blockingGet()
+                    }
                 }
 
                 return ServiceResponse.success(networkPoolIp)
