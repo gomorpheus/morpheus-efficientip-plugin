@@ -107,7 +107,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 log.warn("no integration")
             }
         } catch(e) {
-            log.error("provisionServer error: ${e}", e)
+            log.error("createRecord error: ${e}", e)
         } finally {
             client.shutdownClient()
         }
