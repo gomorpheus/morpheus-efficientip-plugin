@@ -12,6 +12,13 @@ This is a Morpheus plugin that leverages the `morpheus-plugin-core` which can be
 
 A jar will be produced in the `build/lib` folder that can be uploaded into a Morpheus environment.
 
+
+### Configuring
+
+Once the plugin is loaded in the environment. Efficient IP Becomes available in `Infrastructure -> Network -> Services`.
+
+When adding the integration simply enter the URL of the Efficient IP Server (no path is needed just the root url) and the credentials with sufficient enough privileges to talk to the API.
+
 ### Thanks
 
 Thanks to EfficientIP for partnering with us and providing the information we needed to build this plugin.
