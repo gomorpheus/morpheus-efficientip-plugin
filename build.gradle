@@ -81,4 +81,14 @@ test {
 		showStandardStreams = true
 	}
 }
+
+shadowJar {
+	// archiveFileName = "${baseName}-${version}.mpl"
+}
+
+tasks.withType(Sign) {
+    onlyIf { isReleaseVersion }
+}
+
+
 tasks.assemble.dependsOn tasks.shadowJar
