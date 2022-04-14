@@ -4,7 +4,7 @@ This is the official Morpheus plugin for interacting with EfficientIP SolidServe
 
 ### Building
 
-This is a Morpheus plugin that leverages the `morpheus-plugin-core` which can be referenced by visiting [https://developer.morpheusdata.com](https://developer.morpheusdata.com). It is a groovy plugin designed to be uploaded into a Morpheus environment via the `Administartion -> Integrations -> Plugins` section. To build this product from scratch simply run the shadowJar gradle task on java 11:
+This is a Morpheus plugin that leverages the `morpheus-plugin-core` which can be referenced by visiting [https://developer.morpheusdata.com](https://developer.morpheusdata.com). It is a groovy plugin designed to be uploaded into a Morpheus environment via the `Administration -> Integrations -> Plugins` section. To build this product from scratch simply run the shadowJar gradle task on java 11:
 
 ```bash
 ./gradlew shadowJar
