@@ -65,6 +65,16 @@ jar {
 		attributes(
 				'Plugin-Class': 'com.efficientip.solidserver.SolidServerPlugin',
 				'Plugin-Version': version
+				'Morpheus-Name': 'Efficient IP',
+				'Morpheus-Organization': 'morpheus',
+				'Morpheus-Code': 'efficient-ip-plugin',
+				'Morpheus-Description': 'Plugin for Efficient IP',
+				'Morpheus-Logo': 'assets/efficientIP140-black.svg',
+				'Morpheus-Logo-Dark': 'assets/efficientIP140-white.svg',
+				'Morpheus-Color': '#1a1a1a',
+				'Morpheus-Labels': 'Plugin, Cloud, Google',
+				'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-plugin-core',
+				'Morpheus-Min-Appliance-Version': "5.4.5"
 		)
 	}
 }
