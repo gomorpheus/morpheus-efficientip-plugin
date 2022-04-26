@@ -64,7 +64,7 @@ jar {
 	manifest {
 		attributes(
 				'Plugin-Class': 'com.efficientip.solidserver.SolidServerPlugin',
-				'Plugin-Version': version
+				'Plugin-Version': version,
 				'Morpheus-Name': 'Efficient IP',
 				'Morpheus-Organization': 'morpheus',
 				'Morpheus-Code': 'efficient-ip-plugin',
