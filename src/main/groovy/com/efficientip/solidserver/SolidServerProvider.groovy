@@ -423,7 +423,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             }
 
             if (listResults.success) {
-                List<Map> apiItems = listResults.data as List<Map>
+                List<Map> apiItems = listResults.data.findAll{!it.type?.contains('free')} as List<Map>
                 Observable<NetworkPoolIpIdentityProjection> poolIps = morpheus.network.pool.poolIp.listIdentityProjections(pool.id)
                 SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp> syncTask = new SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp>(poolIps, apiItems)
                 return syncTask.addMatchFunction { NetworkPoolIpIdentityProjection ipObject, Map apiItem ->
