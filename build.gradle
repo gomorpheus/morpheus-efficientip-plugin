@@ -71,7 +71,7 @@ jar {
 				'Morpheus-Description': 'Plugin for Efficient IP',
 				'Morpheus-Logo': 'assets/efficientIP140-black.svg',
 				'Morpheus-Logo-Dark': 'assets/efficientIP140-white.svg',
-				'Morpheus-Color': '#1a1a1a',
+				'Morpheus-Color': '#ffffff',
 				'Morpheus-Labels': 'Plugin, Networking, Network, Efficient, IP',
 				'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-plugin-core',
 				'Morpheus-Min-Appliance-Version': "5.4.5"
