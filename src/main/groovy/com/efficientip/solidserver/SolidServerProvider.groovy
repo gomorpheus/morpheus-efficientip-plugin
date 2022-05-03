@@ -342,10 +342,11 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             def addConfig = [parentId: poolServer.id, parentType: 'NetworkPoolServer', poolEnabled:true, configuration: add.site_id]
             def rangeConfig = [ startAddress: add.start_hostaddr,
                                 endAddress: add.end_hostaddr, addressCount: add.pool_size?.toInteger() ?: add.subnet_size?.toInteger()]
+            def rangeName = "${rangeConfig.startAddress} - ${rangeConfig.endAddress}"
             if(add.type == 'pool') {
-                addConfig += [type:poolType, name: add.pool_name,externalId: add.pool_id, displayName: "${add.subnet_name} - ${add.pool_name}"]
+                addConfig += [type:poolType, name: add.pool_name ?: rangeName,externalId: add.pool_id, displayName: "${add.subnet_name} - ${add.pool_name}"]
             } else {
-                addConfig += [type:subnetType, name: add.subnet_name,externalId: add.subnet_id, displayName: add.subnet_name]
+                addConfig += [type:subnetType, name: add.subnet_name ?: rangeName,externalId: add.subnet_id, displayName: add.subnet_name ?: rangeName]
             }
             addConfig.ipCount = rangeConfig.addressCount
 
