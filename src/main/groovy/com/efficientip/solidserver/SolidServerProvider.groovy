@@ -302,7 +302,6 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
     void cacheNetworks(HttpApiClient client, NetworkPoolServer poolServer, Map opts = [:]) {
         opts.doPaging = true
         def listResults = listNetworkSubnetsAndPools(client, poolServer, opts)
-        log.info("listResults: {}", listResults.dump())
 
         if(listResults.success) {
             List apiItems = listResults.data as List<Map>
@@ -377,7 +376,6 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 }
 
                 if(existingItem.ipCount != ipCount) {
-                    log.info("Setting IP Count: ${ipCount} for ${displayName}")
                     existingItem.ipCount = ipCount
                     save = true
                 }
@@ -424,7 +422,8 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             }
 
             if (listResults.success) {
-                List<Map> apiItems = listResults.data.findAll{!it.type?.contains('free')} as List<Map>
+
+                List<Map> apiItems = listResults.data.findAll{!it.type?.contains('free')}.unique{it.hostaddr} as List<Map>
                 Observable<NetworkPoolIpIdentityProjection> poolIps = morpheus.network.pool.poolIp.listIdentityProjections(pool.id)
                 SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp> syncTask = new SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp>(poolIps, apiItems)
                 return syncTask.addMatchFunction { NetworkPoolIpIdentityProjection ipObject, Map apiItem ->
@@ -512,7 +511,6 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         try {
             def listResults = listDnsZones(client, poolServer, opts)
 
-            log.info("listZoneResults: {}", listResults)
             if (listResults.success) {
                 List apiItems = listResults.data as List<Map>
                 Observable<NetworkDomainIdentityProjection> domainRecords = morpheus.network.domain.listIdentityProjections(poolServer.integration.id)
@@ -555,7 +553,6 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             networkDomain.configuration = add.dns_id
             return networkDomain
         }
-        log.info("Adding Missing Zone Records! ${missingZonesList}")
         morpheus.network.domain.create(poolServer.integration.id, missingZonesList).blockingGet()
     }
 
@@ -705,7 +702,6 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
      */
     @Override
     ServiceResponse initializeNetworkPoolServer(NetworkPoolServer poolServer, Map opts) {
-        log.info("initializeNetworkPoolServer: ${poolServer.dump()}")
         def rtn = new ServiceResponse()
         try {
             if(poolServer) {
@@ -718,7 +714,6 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             rtn.error = "initializeNetworkPoolServer error: ${e}"
             log.error("initializeNetworkPoolServer error: ${e}", e)
         }
-        log.info(rtn.dump())
         return rtn
     }
 
