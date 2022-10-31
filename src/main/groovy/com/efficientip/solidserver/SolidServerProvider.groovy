@@ -94,7 +94,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 } else {
                     def addQueryParams = [rr_name: fqdn.toString(), rr_type: record.type, value1: record.content, ttl: record.ttl?.toString(), dns_id: record.networkDomain.configuration, dns_zone_id: record.networkDomain.externalId]
                     log.info("Add DNS Query Params ${addQueryParams}")
-                    def results = client.callJsonApi(poolServer.serviceUrl, dnsRRAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl,queryParams: addQueryParams), 'POST')
+                    def results = client.callJsonApi(poolServer.serviceUrl, dnsRRAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl,queryParams: addQueryParams), 'POST')
 
 
                     log.info("createRecord results: ${results}")
@@ -135,7 +135,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                         String apiPath = "/rest/dns_rr_delete"
                         def deleteQueryParams = [rr_id: record.externalId]
                         //we have an A Record to delete
-                        def results = client.callJsonApi(serviceUrl, apiPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl, queryParams: deleteQueryParams,
+                        def results = client.callJsonApi(serviceUrl, apiPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl, queryParams: deleteQueryParams,
                                 contentType:ContentType.APPLICATION_JSON), 'DELETE')
                         log.info("deleteRecord results: ${results}")
                         if(results.success) {
@@ -746,7 +746,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             def ipAddResults = null
             if(networkPoolIp.ipAddress) {
                 addQueryParams.hostaddr = networkPoolIp.ipAddress
-                ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                         queryParams: addQueryParams), 'POST')
 
             } else {
@@ -757,7 +757,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                     queryParams.subnet_id = networkPool.externalId
                 }
                 log.debug("getting Free Addresses ${queryParams}")
-                def freeIpResults = client.callJsonApi(serviceUrl, findFreeAddressPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                def freeIpResults = client.callJsonApi(serviceUrl, findFreeAddressPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                         queryParams: queryParams), 'GET')
                 log.debug("Free IP Results: ${freeIpResults}")
                 def attempts = 0
@@ -769,7 +769,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                         addQueryParams.site_id = siteId
                         addQueryParams.hostaddr = hostAddr
                         log.debug("attempting ip add for address ${hostAddr}")
-                        ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                        ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                                 queryParams: addQueryParams), 'POST')
                         log.debug("ipAddResults: ${ipAddResults}")
                         if(ipAddResults.success) {
@@ -828,7 +828,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
 
             def addQueryParams = [name: hostname.toString(), hostaddr: networkPoolIp.ipAddress, ip_id:networkPoolIp.externalId]
 
-            def ipAddResults = client.callJsonApi(poolServer.serviceUrl, ipAddPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+            def ipAddResults = client.callJsonApi(poolServer.serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                     queryParams: addQueryParams), 'PUT')
 
 
@@ -864,7 +864,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         def poolServer = morpheus.network.getPoolServerById(networkPool.poolServer.id).blockingGet()
         try {
             if(poolIp.externalId) {
-                def results = client.callApi(poolServer.serviceUrl, "/rest/ip_delete", poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                def results = client.callApi(poolServer.serviceUrl, "/rest/ip_delete", poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], ignoreSSL: poolServer.ignoreSsl,
                         contentType:ContentType.APPLICATION_JSON,queryParams: [ip_id:poolIp.externalId]), 'DELETE')
                 if(results.success) {
                     return ServiceResponse.success(poolIp)
@@ -877,6 +877,34 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         } finally {
             client.shutdownClient()
         }
+        return null
+    }
+
+    /**
+     * Periodically called to refresh and sync data coming from the relevant integration. Most integration providers
+     * provide a method like this that is called periodically (typically 5 - 10 minutes). DNS Sync operates on a 10min
+     * cycle by default. Useful for caching DNS Records created outside of Morpheus.
+     * NOTE: This method is unused when paired with a DNS Provider so simply return null
+     * @param integration The Integration Object contains all the saved information regarding configuration of the DNS Provider.
+     */
+    @Override
+    void refresh(AccountIntegration integration) {
+        //NOOP
+    }
+
+    /**
+     * Validation Method used to validate all inputs applied to the integration of an DNS Provider upon save.
+     * If an input fails validation or authentication information cannot be verified, Error messages should be returned
+     * via a {@link ServiceResponse} object where the key on the error is the field name and the value is the error message.
+     * If the error is a generic authentication error or unknown error, a standard message can also be sent back in the response.
+     * NOTE: This is unused when paired with an IPAMProvider interface
+     * @param integration The Integration Object contains all the saved information regarding configuration of the DNS Provider.
+     * @param opts any custom payload submission options may exist here
+     * @return A response is returned depending on if the inputs are valid or not.
+     */
+    @Override
+    ServiceResponse verifyAccountIntegration(AccountIntegration integration, Map opts) {
+        //NOOP
         return null
     }
 
@@ -900,11 +928,12 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
     List<OptionType> getIntegrationOptionTypes() {
         return [
                 new OptionType(code: 'solidserver.serviceUrl', name: 'Service URL', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUrl', fieldLabel: 'API Url', fieldContext: 'domain', displayOrder: 0),
-                new OptionType(code: 'solidserver.serviceUsername', name: 'Service Username', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUsername', fieldLabel: 'Username', fieldContext: 'domain', displayOrder: 1),
-                new OptionType(code: 'solidserver.servicePassword', name: 'Service Password', inputType: OptionType.InputType.PASSWORD, fieldName: 'servicePassword', fieldLabel: 'Password', fieldContext: 'domain', displayOrder: 2),
-                new OptionType(code: 'solidserver.throttleRate', name: 'Throttle Rate', inputType: OptionType.InputType.NUMBER, defaultValue: 0, fieldName: 'serviceThrottleRate', fieldLabel: 'Throttle Rate', fieldContext: 'domain', displayOrder: 3),
-                new OptionType(code: 'solidserver.ignoreSsl', name: 'Ignore SSL', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'ignoreSsl', fieldLabel: 'Disable SSL SNI Verification', fieldContext: 'domain', displayOrder: 4),
-                new OptionType(code: 'solidserver.inventoryExisting', name: 'Inventory Existing', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'inventoryExisting', fieldLabel: 'Inventory Existing', fieldContext: 'config', displayOrder: 5)
+                new OptionType(code: 'solidserver.credentials', name: 'Credentials', inputType: OptionType.InputType.CREDENTIAL, fieldName: 'type', fieldLabel: 'Credentials', fieldContext: 'credential', required: true, displayOrder: 1, defaultValue: 'local',optionSource: 'credentials',config: '{"credentialTypes":["username-password"]}'),
+                new OptionType(code: 'solidserver.serviceUsername', name: 'Service Username', inputType: OptionType.InputType.TEXT, fieldName: 'serviceUsername', fieldLabel: 'Username', fieldContext: 'domain', displayOrder: 2, localCredential: true),
+                new OptionType(code: 'solidserver.servicePassword', name: 'Service Password', inputType: OptionType.InputType.PASSWORD, fieldName: 'servicePassword', fieldLabel: 'Password', fieldContext: 'domain', displayOrder: 3, localCredential: true),
+                new OptionType(code: 'solidserver.throttleRate', name: 'Throttle Rate', inputType: OptionType.InputType.NUMBER, defaultValue: 0, fieldName: 'serviceThrottleRate', fieldLabel: 'Throttle Rate', fieldContext: 'domain', displayOrder: 4),
+                new OptionType(code: 'solidserver.ignoreSsl', name: 'Ignore SSL', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'ignoreSsl', fieldLabel: 'Disable SSL SNI Verification', fieldContext: 'domain', displayOrder: 5),
+                new OptionType(code: 'solidserver.inventoryExisting', name: 'Inventory Existing', inputType: OptionType.InputType.CHECKBOX, defaultValue: 0, fieldName: 'inventoryExisting', fieldLabel: 'Inventory Existing', fieldContext: 'config', displayOrder: 6)
         ]
     }
 
@@ -1023,7 +1052,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         while(hasMore && attempt < 1000) {
             Map<String,String> pageQuery = [limit:maxResults.toString(),offset:offset.toString()] + (opts?.queryParams ?: [:])
             //load results
-            def results = client.callJsonApi(serviceUrl, apiPath, poolServer.serviceUsername, poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], queryParams: pageQuery,
+            def results = client.callJsonApi(serviceUrl, apiPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers:['Content-Type':'application/json'], queryParams: pageQuery,
                     contentType: ContentType.APPLICATION_JSON, ignoreSSL: poolServer.ignoreSsl), 'GET')
             log.debug("listNetworkSubnets results: ${results.toMap()}")
             if(results?.success && !results?.hasErrors()) {
