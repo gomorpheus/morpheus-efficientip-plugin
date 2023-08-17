@@ -281,7 +281,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, 'SolidServer api not reachable')
             }
             Date now = new Date()
-            if(testResults.success) {
+            if(testResults?.success) {
                 cacheNetworks(solidServerClient,poolServer)
                 cacheZones(solidServerClient,poolServer)
                 if(poolServer?.configMap?.inventoryExisting) {
