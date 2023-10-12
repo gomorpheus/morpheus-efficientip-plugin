@@ -411,9 +411,9 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
 
     // cacheIpAddressRecords
     void cacheIpAddressRecords(HttpApiClient client, NetworkPoolServer poolServer, Map opts=[:]) {
-        morpheus.network.pool.listIdentityProjections(poolServer.id).buffer(50).flatMap { Collection<NetworkPoolIdentityProjection> poolIdents ->
+        morpheus.network.pool.listIdentityProjections(poolServer.id).buffer(50).concatMap { Collection<NetworkPoolIdentityProjection> poolIdents ->
             return morpheus.network.pool.listById(poolIdents.collect{it.id})
-        }.flatMap { NetworkPool pool ->
+        }.concatMap { NetworkPool pool ->
             def listResults
             if(pool.type.code == 'solidserver.pool') {
                 listResults = listIpAddresses(client,poolServer,opts + [queryParams:[WHERE:"pool_id=${pool.externalId}".toString()]])
@@ -450,7 +450,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             }
         }.doOnError{ e ->
             log.error("cacheIpRecords error: ${e}", e)
-        }.subscribe()
+        }.blockingSubscribe()
 
     }
 
@@ -595,9 +595,9 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
 
     // Cache Zones methods
     def cacheZoneRecords(HttpApiClient client, NetworkPoolServer poolServer, Map opts=[:]) {
-        morpheus.network.domain.listIdentityProjections(poolServer.integration.id).buffer(50).flatMap { Collection<NetworkDomainIdentityProjection> poolIdents ->
+        morpheus.network.domain.listIdentityProjections(poolServer.integration.id).buffer(50).concatMap { Collection<NetworkDomainIdentityProjection> poolIdents ->
             return morpheus.network.domain.listById(poolIdents.collect{it.id})
-        }.flatMap { NetworkDomain domain ->
+        }.concatMap { NetworkDomain domain ->
 
             def listResults = listDnsResourceRecords(client,poolServer,opts + [queryParams:[WHERE:"dnszone_id=${domain.externalId}".toString()]])
 
@@ -628,7 +628,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             }
         }.doOnError{ e ->
             log.error("cacheIpRecords error: ${e}", e)
-        }.subscribe()
+        }.blockingSubscribe()
 
     }
 
