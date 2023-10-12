@@ -33,7 +33,7 @@ configurations {
 }
 
 dependencies {
-	provided "com.morpheusdata:morpheus-plugin-api:0.13.4"
+	provided "com.morpheusdata:morpheus-plugin-api:$plugincore"
 	provided "org.codehaus.groovy:groovy-all:$groovyVersion"
 	implementation 'commons-beanutils:commons-beanutils:1.9.3'
 	implementation "org.slf4j:slf4j-api:$slf4jVersion"
@@ -41,7 +41,7 @@ dependencies {
 	implementation 'commons-net:commons-net:3.6'
 
 	// Include morpheus-core and it's dependencies
-	testImplementation 'io.reactivex.rxjava2:rxjava:2.2.0'
+	testImplementation 'io.reactivex.rxjava3:rxjava:3.1.8'
 	testImplementation 'org.apache.httpcomponents:httpclient:4.5.3'
 	testImplementation 'org.apache.httpcomponents:httpcore:4.4.5'
 	testImplementation "org.slf4j:slf4j-parent:$slf4jVersion"
@@ -72,9 +72,9 @@ jar {
 				'Morpheus-Logo': 'assets/efficientIP140-black.svg',
 				'Morpheus-Logo-Dark': 'assets/efficientIP140-white.svg',
 				'Morpheus-Color': '#ffffff',
-				'Morpheus-Labels': 'Plugin, Networking, Network, Efficient, IP',
-				'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-plugin-core',
-				'Morpheus-Min-Appliance-Version': "5.5.2"
+				'Morpheus-Labels': 'plugin,networking,ipam',
+				'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-efficientip-plugin.git',
+				'Morpheus-Min-Appliance-Version': minversion
 		)
 	}
 }

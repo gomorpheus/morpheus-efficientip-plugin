@@ -40,9 +40,9 @@ import com.morpheusdata.model.projection.NetworkPoolIdentityProjection
 import com.morpheusdata.model.projection.NetworkPoolIpIdentityProjection
 import com.morpheusdata.response.ServiceResponse
 import groovy.util.logging.Slf4j
-import io.reactivex.Single
+import io.reactivex.rxjava3.core.Single
 import org.apache.http.entity.ContentType
-import io.reactivex.Observable
+import io.reactivex.rxjava3.core.Observable
 
 /**
  * The IPAM / DNS Provider implementation for EfficientIP SolidServer
