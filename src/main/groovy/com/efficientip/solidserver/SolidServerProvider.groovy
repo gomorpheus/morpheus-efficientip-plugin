@@ -272,13 +272,13 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
 
                 if(!testResults.success) {
                     //NOTE invalidLogin was only ever set to false.
-                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, 'error calling EfficientIP SolidServer').blockingGet()
+                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, 'error calling EfficientIP SolidServer').subscribe().dispose()
                 } else {
 
-                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.syncing).blockingGet()
+                    morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.syncing).subscribe().dispose()
                 }
             } else {
-                morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, 'SolidServer api not reachable')
+                morpheus.network.updateNetworkPoolServerStatus(poolServer, AccountIntegration.Status.error, 'SolidServer api not reachable').subscribe().dispose()
             }
             Date now = new Date()
             if(testResults?.success) {
