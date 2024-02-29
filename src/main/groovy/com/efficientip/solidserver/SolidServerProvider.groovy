@@ -74,6 +74,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
     ServiceResponse createRecord(AccountIntegration integration, NetworkDomainRecord record, Map opts) {
         ServiceResponse<NetworkDomainRecord> rtn = new ServiceResponse<>()
         HttpApiClient client = new HttpApiClient()
+        client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
         String dnsRRAddPath = "/rest/dns_rr_add"
         def poolServer = morpheus.network.getPoolServerByAccountIntegration(integration).blockingGet()
 
@@ -131,6 +132,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 morpheus.network.getPoolServerByAccountIntegration(integration).doOnSuccess({ poolServer ->
                     def serviceUrl = poolServer.serviceUrl
                     HttpApiClient client = new HttpApiClient()
+                    client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
                     try {
                         String apiPath = "/rest/dns_rr_delete"
                         def deleteQueryParams = [rr_id: record.externalId]
@@ -176,6 +178,8 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         ServiceResponse<NetworkPoolServer> rtn = ServiceResponse.error()
         rtn.data = poolServer
         HttpApiClient solidServerClient = new HttpApiClient()
+        def networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
+        solidServerClient.networkProxy = networkProxy
         try {
             def apiUrl = poolServer.serviceUrl
             boolean hostOnline = false
@@ -183,7 +187,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 def apiUrlObj = new URL(apiUrl)
                 def apiHost = apiUrlObj.host
                 def apiPort = apiUrlObj.port > 0 ? apiUrlObj.port : (apiUrlObj?.protocol?.toLowerCase() == 'https' ? 443 : 80)
-                hostOnline = ConnectionUtils.testHostConnectivity(apiHost, apiPort, false, true, null)
+                hostOnline = ConnectionUtils.testHostConnectivity(apiHost, apiPort, false, true, networkProxy)
             } catch(e) {
                 log.error("Error parsing URL {}", apiUrl, e)
             }
@@ -258,12 +262,14 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         log.debug("refreshNetworkPoolServer: {}", poolServer.dump())
         HttpApiClient solidServerClient = new HttpApiClient()
         solidServerClient.throttleRate = poolServer.serviceThrottleRate
+        def networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
+        solidServerClient.networkProxy = networkProxy
         try {
             def apiUrl = poolServer.serviceUrl
             def apiUrlObj = new URL(apiUrl)
             def apiHost = apiUrlObj.host
             def apiPort = apiUrlObj.port > 0 ? apiUrlObj.port : (apiUrlObj?.protocol?.toLowerCase() == 'https' ? 443 : 80)
-            def hostOnline = ConnectionUtils.testHostConnectivity(apiHost, apiPort, false, true, null)
+            def hostOnline = ConnectionUtils.testHostConnectivity(apiHost, apiPort, false, true, networkProxy)
             log.debug("online: {} - {}", apiHost, hostOnline)
             def testResults
             // Promise
@@ -716,6 +722,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
     @Override
     ServiceResponse createHostRecord(NetworkPoolServer poolServer, NetworkPool networkPool, NetworkPoolIp networkPoolIp, NetworkDomain domain, Boolean createARecord, Boolean createPtrRecord) {
         HttpApiClient client = new HttpApiClient();
+        client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
         try {
             String serviceUrl = poolServer.serviceUrl
             String findFreeAddressPath = "/rpc/ip_find_free_address"
@@ -806,6 +813,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
     @Override
     ServiceResponse updateHostRecord(NetworkPoolServer poolServer, NetworkPool networkPool, NetworkPoolIp networkPoolIp) {
         HttpApiClient client = new HttpApiClient();
+        client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
         try {
             String ipAddPath = "/rest/ip_add"
             def hostname = networkPoolIp.hostname
@@ -845,6 +853,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
     @Override
     ServiceResponse deleteHostRecord(NetworkPool networkPool, NetworkPoolIp poolIp, Boolean deleteAssociatedRecords) {
         HttpApiClient client = new HttpApiClient();
+        client.networkProxy = morpheusContext.async.setting.getGlobalNetworkProxy()
         def poolServer = morpheus.network.getPoolServerById(networkPool.poolServer.id).blockingGet()
         try {
             if(poolIp.externalId) {
