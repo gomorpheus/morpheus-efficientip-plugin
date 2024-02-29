@@ -33,7 +33,7 @@ configurations {
 }
 
 dependencies {
-	provided "com.morpheusdata:morpheus-plugin-api:0.13.4"
+	provided "com.morpheusdata:morpheus-plugin-api:$plugincore"
 	provided "org.codehaus.groovy:groovy-all:$groovyVersion"
 	implementation 'commons-beanutils:commons-beanutils:1.9.3'
 	implementation "org.slf4j:slf4j-api:$slf4jVersion"
@@ -74,7 +74,7 @@ jar {
 				'Morpheus-Color': '#ffffff',
 				'Morpheus-Labels': 'plugin,networking,ipam',
 				'Morpheus-Repo': 'https://github.com/gomorpheus/morpheus-efficientip-plugin.git',
-				'Morpheus-Min-Appliance-Version': "5.5.2"
+				'Morpheus-Min-Appliance-Version': minversion
 		)
 	}
 }
