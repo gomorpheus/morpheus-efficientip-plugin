@@ -937,7 +937,9 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
     Collection<NetworkPoolType> getNetworkPoolTypes() {
         return [
                 new NetworkPoolType(code:'solidserver.subnet', name:'SolidServer Subnet', creatable:false, description:'SolidServer Subnet', rangeSupportsCidr: false),
-                new NetworkPoolType(code:'solidserver.pool', name:'SolidServer Pool', creatable:false, description:'SolidServer Subnet', rangeSupportsCidr: false)
+                new NetworkPoolType(code:'solidserver.pool', name:'SolidServer Pool', creatable:false, description:'SolidServer Pool', rangeSupportsCidr: false),
+                new NetworkPoolType(code:'solidserver.subnetipv6', name:'SolidServer Subnet IPv6', creatable:false, description:'SolidServer Subnet IPv6', rangeSupportsCidr: false),
+                new NetworkPoolType(code:'solidserver.poolipv6', name:'SolidServer Pool IPv6', creatable:false, description:'SolidServer Pool IPv6', rangeSupportsCidr: false)
         ];
     }
 
