@@ -43,6 +43,7 @@ import groovy.util.logging.Slf4j
 import io.reactivex.rxjava3.core.Single
 import org.apache.http.entity.ContentType
 import io.reactivex.rxjava3.core.Observable
+import java.security.SecureRandom
 
 /**
  * The IPAM / DNS Provider implementation for EfficientIP SolidServer
@@ -775,16 +776,22 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 } else {
                     queryParams.subnet_id = networkPool.externalId
                 }
-                log.debug("getting Free Addresses ${queryParams}")
-                def freeIpResults = client.callJsonApi(serviceUrl, findFreeAddressPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
-                        queryParams: queryParams), 'GET')
-                log.debug("Free IP Results: ${freeIpResults}")
-                def attempts = 0
-                while (freeIpResults.success && (ipAddResults == null || !ipAddResults?.success)) {
-                    attempts++
-                    for(freeIp in freeIpResults.data) {
-                        def siteId = freeIp.site_id
-                        def hostAddr = freeIp.hostaddr
+
+                // EIP gives 10 ips and doesn't support concurrency well. Updating this to loop through the lists a bit differently.
+                while (ipAddResults == null || !ipAddResults?.success) {
+                    ipAttempts++
+
+                    log.debug("getting Free Addresses ${queryParams}")
+                    def freeIpResults = client.callJsonApi(serviceUrl, findFreeAddressPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                            queryParams: queryParams), 'GET')
+                    log.debug("Free IP Results: ${freeIpResults}")
+                    def attempts = 0
+                    while (freeIpResults.success && (ipAddResults == null || !ipAddResults?.success)) {
+                        attempts++
+
+                        def randomIp = freeIpResults.data[(int)(secureRandom.nextDouble() * freeIpResults.data.size())]
+                        def siteId = randomIp.site_id
+                        def hostAddr = randomIp.hostaddr
                         addQueryParams.site_id = siteId
                         addQueryParams.hostaddr = hostAddr
                         log.debug("attempting ip add for address ${hostAddr}")
@@ -794,10 +801,29 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                         if(ipAddResults.success) {
                             break
                         }
+
+                        // for(freeIp in freeIpResults.data) {
+                        //     def siteId = freeIp.site_id
+                        //     def hostAddr = freeIp.hostaddr
+                        //     addQueryParams.site_id = siteId
+                        //     addQueryParams.hostaddr = hostAddr
+                        //     log.debug("attempting ip add for address ${hostAddr}")
+                        //     ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                        //             queryParams: addQueryParams), 'POST')
+                        //     log.debug("ipAddResults: ${ipAddResults}")
+                        //     if(ipAddResults.success) {
+                        //         break
+                        //     }
+                        // }
+                        if(attempts > 5) {
+                            break
+                        }
                     }
-                    if(attempts > 5) {
+                    if(ipAttempts > 2) {
                         break
                     }
+                    // Sleep for 1-5 Seconds before pulling next available list
+                    Thread.sleep(secureRandom.nextInt(1000 - 5000))
                 }
             }
 
