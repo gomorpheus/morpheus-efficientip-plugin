@@ -800,7 +800,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                         log.debug("attempting ip add for address ${hostAddr}")
                         ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                                 queryParams: addQueryParams), 'POST')
-                        log.info("ipAddResults: ${ipAddResults.encodeAsJson()}")
+                        log.debug("ipAddResults: ${ipAddResults.encodeAsJson()}")
                         if(ipAddResults.success) {
                             break
                         }
@@ -843,7 +843,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 } else {
                     networkPoolIp = morpheus.network.pool.poolIp.create(networkPoolIp)?.blockingGet()
                 }
-                log.info("networkPoolIp: ${networkPoolIp}")
+                log.debug("networkPoolIp: ${networkPoolIp}")
                 if (createARecord && domain) {
                     def domainRecord = new NetworkDomainRecord(networkDomain: domain,ttl:3600, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A',content: networkPoolIp.ipAddress)
                     def createRecordResults = createRecord(poolServer.integration,domainRecord,[:])
@@ -851,7 +851,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                         morpheus.network.domain.record.create(createRecordResults.data).blockingGet()
                     }
                 }
-                log.info("createRecordResults: ${createRecordResults}")
+                log.debug("createRecordResults: ${createRecordResults}")
 
                 return ServiceResponse.success(networkPoolIp)
             } else {
