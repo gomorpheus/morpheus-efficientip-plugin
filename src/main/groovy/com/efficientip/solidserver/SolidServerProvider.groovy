@@ -73,14 +73,29 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
      */
     @Override
     ServiceResponse createRecord(AccountIntegration integration, NetworkDomainRecord record, Map opts) {
+        NetworkPoolServer poolServer = morpheus.network.getPoolServerByAccountIntegration(integration).blockingGet()
+        return createRecord(poolServer,record,opts)
+    }
+
+
+    /**
+     * Creates a manually allocated DNS Record of the specified record type on the passed {@link NetworkDomainRecord} object.
+     * This is typically called outside of automation and is a manual method for administration purposes.
+     * @param integration The DNS Integration record which contains things like connectivity info to the DNS Provider
+     * @param record The domain record that is being requested for creation. All the metadata needed to create teh record
+     *               should exist here.
+     * @param opts any additional options that may be used in the future to configure behavior. Currently unused
+     * @return a ServiceResponse with the success/error state of the create operation as well as the modified record.
+     */
+    @Override
+    ServiceResponse createRecord(NetworkPoolServer poolServer, NetworkDomainRecord record, Map opts) {
         ServiceResponse<NetworkDomainRecord> rtn = new ServiceResponse<>()
         HttpApiClient client = new HttpApiClient()
         client.networkProxy = morpheusContext.services.setting.getGlobalNetworkProxy()
         String dnsRRAddPath = "/rest/dns_rr_add"
-        def poolServer = morpheus.network.getPoolServerByAccountIntegration(integration).blockingGet()
 
         try {
-            if(integration) {
+            if(poolServer) {
                 def fqdn = record.name
                 if(!record.name.endsWith(record.networkDomain.name)) {
                     fqdn = "${record.name}.${record.networkDomain.name}"
@@ -846,7 +861,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 log.debug("networkPoolIp: ${networkPoolIp}")
                 if (createARecord && domain) {
                     def domainRecord = new NetworkDomainRecord(networkDomain: domain,ttl:3600, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A',content: networkPoolIp.ipAddress)
-                    def createRecordResults = createRecord(poolServer.integration,domainRecord,[:])
+                    def createRecordResults = createRecord(poolServer,domainRecord,[:])
                     if(createRecordResults.success) {
                         morpheus.network.domain.record.create(createRecordResults.data).blockingGet()
                     }
