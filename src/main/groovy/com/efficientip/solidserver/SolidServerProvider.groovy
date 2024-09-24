@@ -43,6 +43,7 @@ import groovy.util.logging.Slf4j
 import io.reactivex.rxjava3.core.Single
 import org.apache.http.entity.ContentType
 import io.reactivex.rxjava3.core.Observable
+import java.security.SecureRandom
 
 /**
  * The IPAM / DNS Provider implementation for EfficientIP SolidServer
@@ -432,9 +433,11 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 List<Map> apiItems = listResults.data.findAll{!it.type?.contains('free') || it?.subnet_start_hostaddr == it.hostaddr || it?.subnet_end_hostaddr == it.hostaddr} as List<Map>
                 Observable<NetworkPoolIpIdentityProjection> poolIps = morpheus.network.pool.poolIp.listIdentityProjections(pool.id)
                 SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp> syncTask = new SyncTask<NetworkPoolIpIdentityProjection, Map, NetworkPoolIp>(poolIps, apiItems)
-                return syncTask.addMatchFunction { NetworkPoolIpIdentityProjection ipObject, Map apiItem ->
-                    ipObject.externalId == apiItem.ip_id
-                }.addMatchFunction { NetworkPoolIpIdentityProjection domainObject, Map apiItem ->
+                // return syncTask.addMatchFunction { NetworkPoolIpIdentityProjection ipObject, Map apiItem ->
+                    // ipObject.externalId == apiItem.ip_id
+                // }.addMatchFunction { NetworkPoolIpIdentityProjection domainObject, Map apiItem ->
+                // ids are not unique
+                return syncTask.addMatchFunction { NetworkPoolIpIdentityProjection domainObject, Map apiItem ->
                     domainObject.ipAddress == apiItem.hostaddr
                 }.onDelete {removeItems ->
                     morpheus.network.pool.poolIp.remove(pool.id, removeItems).blockingGet()
@@ -775,29 +778,56 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 } else {
                     queryParams.subnet_id = networkPool.externalId
                 }
-                log.debug("getting Free Addresses ${queryParams}")
-                def freeIpResults = client.callJsonApi(serviceUrl, findFreeAddressPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
-                        queryParams: queryParams), 'GET')
-                log.debug("Free IP Results: ${freeIpResults}")
-                def attempts = 0
-                while (freeIpResults.success && (ipAddResults == null || !ipAddResults?.success)) {
-                    attempts++
-                    for(freeIp in freeIpResults.data) {
-                        def siteId = freeIp.site_id
-                        def hostAddr = freeIp.hostaddr
+
+                // EIP gives 10 ips and doesn't support concurrency well. Updating this to loop through the lists a bit differently.
+                def ipAttempts = 0
+                SecureRandom random = new SecureRandom()
+                while (ipAddResults == null || !ipAddResults?.success) {
+                    ipAttempts++
+
+                    log.debug("getting Free Addresses ${queryParams}")
+                    def freeIpResults = client.callJsonApi(serviceUrl, findFreeAddressPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                            queryParams: queryParams), 'GET')
+                    log.debug("Free IP Results: ${freeIpResults}")
+                    def attempts = 0
+                    while (freeIpResults.success && (ipAddResults == null || !ipAddResults?.success)) {
+                        attempts++
+                        def randomIp = freeIpResults.data[random.nextInt(freeIpResults.data.size())]
+                        def siteId = randomIp.site_id
+                        def hostAddr = randomIp.hostaddr
                         addQueryParams.site_id = siteId
                         addQueryParams.hostaddr = hostAddr
                         log.debug("attempting ip add for address ${hostAddr}")
                         ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                                 queryParams: addQueryParams), 'POST')
-                        log.debug("ipAddResults: ${ipAddResults}")
+                        log.info("ipAddResults: ${ipAddResults.encodeAsJson()}")
                         if(ipAddResults.success) {
                             break
                         }
+
+                        // for(freeIp in freeIpResults.data) {
+                        //     def siteId = freeIp.site_id
+                        //     def hostAddr = freeIp.hostaddr
+                        //     addQueryParams.site_id = siteId
+                        //     addQueryParams.hostaddr = hostAddr
+                        //     log.debug("attempting ip add for address ${hostAddr}")
+                        //     ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
+                        //             queryParams: addQueryParams), 'POST')
+                        //     log.debug("ipAddResults: ${ipAddResults}")
+                        //     if(ipAddResults.success) {
+                        //         break
+                        //     }
+                        // }
+                        if(attempts > 5) {
+                            break
+                        }
                     }
-                    if(attempts > 5) {
+                    if(ipAttempts > 2) {
+                        log.warn("Failed to allocate IP Address")
                         break
                     }
+                    // Sleep for 1-5 Seconds before pulling next available list
+                    Thread.sleep(random.nextInt(5000))
                 }
             }
 
@@ -813,6 +843,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 } else {
                     networkPoolIp = morpheus.network.pool.poolIp.create(networkPoolIp)?.blockingGet()
                 }
+                log.info("networkPoolIp: ${networkPoolIp}")
                 if (createARecord && domain) {
                     def domainRecord = new NetworkDomainRecord(networkDomain: domain,ttl:3600, networkPoolIp: networkPoolIp, name: hostname, fqdn: hostname, source: 'user', type: 'A',content: networkPoolIp.ipAddress)
                     def createRecordResults = createRecord(poolServer.integration,domainRecord,[:])
@@ -820,6 +851,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                         morpheus.network.domain.record.create(createRecordResults.data).blockingGet()
                     }
                 }
+                log.info("createRecordResults: ${createRecordResults}")
 
                 return ServiceResponse.success(networkPoolIp)
             } else {

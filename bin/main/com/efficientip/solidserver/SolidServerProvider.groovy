@@ -778,6 +778,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 }
 
                 // EIP gives 10 ips and doesn't support concurrency well. Updating this to loop through the lists a bit differently.
+                def ipAttempts = 0
                 while (ipAddResults == null || !ipAddResults?.success) {
                     ipAttempts++
 
@@ -794,10 +795,10 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                         def hostAddr = randomIp.hostaddr
                         addQueryParams.site_id = siteId
                         addQueryParams.hostaddr = hostAddr
-                        log.debug("attempting ip add for address ${hostAddr}")
+                        log.info("attempting ip add for address ${hostAddr}")
                         ipAddResults = client.callJsonApi(serviceUrl, ipAddPath, poolServer.credentialData?.username as String ?: poolServer.serviceUsername, poolServer.credentialData?.password as String ?: poolServer.servicePassword, new HttpApiClient.RequestOptions(headers: ['Content-Type': 'application/json'], ignoreSSL: poolServer.ignoreSsl,
                                 queryParams: addQueryParams), 'POST')
-                        log.debug("ipAddResults: ${ipAddResults}")
+                        log.info("ipAddResults: ${ipAddResults}")
                         if(ipAddResults.success) {
                             break
                         }
@@ -834,7 +835,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 if(createARecord) {
                     networkPoolIp.domain = domain
                 }
-                if (networkPoolIp.id) {
+                if (networkPoolIp?.id) {
                     networkPoolIp = morpheus.network.pool.poolIp.save(networkPoolIp)?.blockingGet()
                 } else {
                     networkPoolIp = morpheus.network.pool.poolIp.create(networkPoolIp)?.blockingGet()
