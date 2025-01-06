@@ -365,9 +365,33 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
             def rangeName = "${rangeConfig.startAddress} - ${rangeConfig.endAddress}"
             if(add.type == 'pool') {
                 addConfig += [type:poolType, name: add.pool_name ?: rangeName,externalId: add.pool_id, displayName: "${add.subnet_name} - ${add.pool_name}"]
+                String poolParams = add.pool_class_parameters
+                if(poolParams) {
+                    try {
+                        Map<String,String> params = parseParamProperties(poolParams)
+                        if(params['__eip_description']) {
+                            addConfig.description = params['__eip_description']
+                        }
+                    } catch(Exception ex) {
+                        log.error("Error Parsing Pool Class Parameters",ex)
+                    }
+                }
             } else {
                 addConfig += [type:subnetType, name: add.subnet_name ?: rangeName,externalId: add.subnet_id, displayName: add.subnet_name ?: rangeName]
+                String subnetParams = add.subnet_class_parameters
+                if(subnetParams) {
+                    try {
+                        Map<String,String> params = parseParamProperties(poolParams)
+                        if(params['__eip_description']) {
+                            addConfig.description = params['__eip_description']
+                        }
+                    } catch(Exception ex) {
+                        log.error("Error Parsing Subnet Class Parameters",ex)
+                    }
+
+                }
             }
+
             addConfig.ipCount = rangeConfig.addressCount
 
             def newNetworkPool =new NetworkPool(addConfig)
@@ -1155,4 +1179,15 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         }
         return rtn
     }
+
+    private static Map<String, String> parseParamProperties(String properties) {
+        Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+        String[] pairs = properties.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+        }
+        return query_pairs;
+    }
+
 }
