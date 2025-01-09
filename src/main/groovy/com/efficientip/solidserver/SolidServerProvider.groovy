@@ -381,7 +381,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 String subnetParams = add.subnet_class_parameters
                 if(subnetParams) {
                     try {
-                        Map<String,String> params = parseParamProperties(poolParams)
+                        Map<String,String> params = parseParamProperties(subnetParams)
                         if(params['__eip_description']) {
                             addConfig.description = params['__eip_description']
                         }
