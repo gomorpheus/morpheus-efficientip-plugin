@@ -1171,6 +1171,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                 }
             } else {
                 if(!rtn.success) {
+                    rtn.success = false
                     rtn.msg = results.error
                 }
                 hasMore = false
