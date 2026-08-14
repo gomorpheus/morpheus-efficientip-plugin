@@ -1,92 +1,130 @@
-# Morpheus Efficient IP Plugin
+# Morpheus EfficientIP Plugin
 
-This plugin provides an IPAM and DNS integration between [EfficientIP SOLIDserver](https://www.efficientip.com/products/solidserver/) and [Morpheus](https://morpheusdata.com). It enables subnet and pool sync, DNS zone and resource record inventory, host record management, IP allocation, and IP release automation from within the Morpheus platform.
+The Morpheus EfficientIP Plugin integrates Morpheus with EfficientIP SolidServer to provide IP address management (IPAM) and DNS record automation. The plugin communicates with the SolidServer REST API to allocate and release IP addresses and manage DNS records.
 
-## Requirements
+## Table of Contents
 
-| Component | Minimum Version |
-|-----------|----------------|
-| Morpheus | 7.0.10 |
+- [Features](#features)
+- [Requirements](#requirements)
+- [Repository structure](#repository-structure)
+- [Building the plugin](#building-the-plugin)
+- [License](#license)
+- [Installing](#installing)
+- [Detailed Usage Steps](#detailed-usage-steps)
+- [API Endpoints](#api-endpoints)
 
-## Installation
-
-1. Download the latest `.jar` from the [Releases](https://github.com/HewlettPackard/morpheus-efficientip-plugin/releases) page, or [build it yourself](#building).
-2. In Morpheus, navigate to **Administration → Integrations → Plugins**.
-3. Click **Browse** and upload the `.jar` file.
-4. The **EfficientIP SolidServer** IPAM/DNS network service integration will appear after the plugin loads.
-
-## Configuration
-
-When adding an EfficientIP SolidServer network service in Morpheus (**Infrastructure → Network → Services**), provide the following:
-
-| Field | Description |
-|-------|-------------|
-| **API Url** | EfficientIP SOLIDserver API endpoint root URL. |
-| **Credentials** | Morpheus credential containing the SOLIDserver username and password. |
-| **Username** | SOLIDserver username used when local credentials are selected. |
-| **Password** | SOLIDserver password used when local credentials are selected. |
-| **Throttle Rate** | Optional API throttle rate for SOLIDserver requests. |
-| **Disable SSL SNI Verification** | Disables SSL SNI verification when connecting to SOLIDserver. |
-| **Inventory Existing** | Syncs existing IP address records and DNS resource records from SOLIDserver into Morpheus. |
-
-Credentials can also be stored as a Morpheus [Credential](https://docs.morpheusdata.com/en/latest/administration/credentials/credentials.html) and selected at network service setup time.
+---
 
 ## Features
 
-### IPAM Sync
+### IP Address Management
 
-The plugin implements `IPAMProvider` and keeps Morpheus network pools aligned with EfficientIP SOLIDserver.
-
-- **Subnets** — terminal SOLIDserver subnets are synced as Morpheus network pools
-- **Pools** — SOLIDserver IP pools are synced as Morpheus network pools
-- **Ranges** — start and end addresses are mapped to Morpheus pool ranges
-- **Pool metadata** — names, display names, site IDs, size, and description parameters are retained
-
-Any additions, updates, and removals in SOLIDserver are automatically reflected in Morpheus on the next network service refresh.
-
-### IP Address Inventory
-
-When existing inventory sync is enabled, the plugin caches SOLIDserver IP address records for synced subnets and pools.
-
-- **Assigned addresses** — synced with hostname and external SOLIDserver ID
-- **Network and broadcast addresses** — marked as unmanaged records
-- **Address updates** — hostname, ID, and address state changes are reflected in Morpheus
-
-### IP Allocation and Release
-
-Morpheus can allocate and release addresses from synced SOLIDserver subnets and pools during workload lifecycle operations. Supported operations include:
-
-- Assign a requested IP address when available
-- Find and allocate a free address from a subnet or pool
-- Create an A record during allocation when requested
-- Update a host record name or address association
-- Release allocated IP records when workloads are removed
-
-### DNS Zone Sync
-
-The plugin implements `DNSProvider` and discovers authoritative DNS zones from SOLIDserver.
-
-- **Authoritative zones** — synced into Morpheus as network domains
-- **DNS IDs and zone IDs** — retained for record creation and deletion
-- **Existing record inventory** — optional sync of existing DNS resource records when enabled in configuration
+Allocate and release IP addresses from EfficientIP SolidServer network pools within Morpheus. Supports automatic next-available IP selection, manual IP entry, and existing inventory import.
 
 ### DNS Record Management
 
-DNS resource records can be managed from Morpheus through the SOLIDserver API. Supported operations include:
+Create and delete DNS records (A and alias records) in SolidServer zones when instances are provisioned or decommissioned.
 
-- Create DNS resource records in synced zones
-- Delete DNS resource records
-- Sync existing DNS records with type, TTL, name, FQDN, and value data
-- Update synced DNS records when values or names change in SOLIDserver
+### Cloud Sync
 
-## Building
+Morpheus synchronises the following SolidServer resources for inventory:
 
-```bash
-./gradlew shadowJar
+- Network pools (subnets and IP ranges managed in SolidServer)
+- IP address allocations
+
+---
+
+## Requirements
+
+| Requirement | Version |
+|-------------|---------|
+| Morpheus | 7.0.10 or later |
+| Java | 11 or later |
+| Gradle | Use the included Gradle wrapper (`./gradlew`) |
+
+Additional prerequisites:
+
+- A running EfficientIP SolidServer instance accessible over HTTP or HTTPS from the Morpheus appliance
+- A SolidServer user account with sufficient API permissions to manage IP addresses and DNS records
+- Network access from the Morpheus appliance to the SolidServer host on the configured port
+
+---
+
+## Repository structure
+
+```
+src/main/groovy/com/efficientip/solidserver/
+├── SolidServerPlugin.groovy    - Plugin entry point; registers SolidServerProvider
+└── SolidServerProvider.groovy  - IPAMProvider implementation; IPAM and DNS operations, sync, OptionTypes
+build.gradle, gradle.properties - Build configuration and plugin metadata
 ```
 
-The plugin JAR will be written to `build/libs/`.
+---
+
+## Building the plugin
+
+Run the following command to compile and package the plugin jar:
+
+```bash
+./gradlew clean build
+```
+
+The packaged jar will be written to `build/libs/`.
+
+To execute tests, use the following command:
+
+```bash
+./gradlew test
+```
+
+---
 
 ## License
 
-Copyright 2022 the original author or authors. Licensed under the [Apache License, Version 2.0](LICENSE).
+This project is licensed under the Apache License 2.0.
+
+See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Installing
+
+1. Build the plugin (see [Building the plugin](#building-the-plugin)) or download a released jar.
+2. In Morpheus, navigate to **Administration > Integrations > Plugins**.
+3. Click **Add** and upload the `morpheus-efficientip-plugin-<version>.jar` from `build/libs/`.
+4. Navigate to **Infrastructure > Networks > IP Pools > Add** and select **EfficientIP** to configure the integration.
+
+---
+
+## Detailed Usage Steps
+
+### Adding an EfficientIP IPAM Integration
+
+1. Go to **Infrastructure > Networks > IP Pools > Add**.
+2. Select **EfficientIP** as the pool server type.
+3. Enter the **Service URL** (e.g. `https://solidserver.example.com`), **Username**, and **Password**.
+4. Save. Morpheus connects to SolidServer and syncs available network pools.
+
+### Allocating an IP Address
+
+When provisioning an instance on a network backed by an EfficientIP pool, Morpheus automatically calls SolidServer to reserve the next available IP. A DNS record is created if DNS is configured on the network.
+
+### Releasing an IP Address
+
+When an instance is decommissioned, Morpheus calls SolidServer to release the IP and delete the associated DNS records.
+
+---
+
+## API Endpoints
+
+This plugin communicates with the **EfficientIP SolidServer REST API** at the configured service URL. Authentication uses HTTP Basic credentials. All calls use HTTP or HTTPS as configured.
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `{serviceUrl}/rest/ip_add` | POST | Allocate an IP address |
+| `{serviceUrl}/rest/ip_alias_add` | POST | Add an IP alias |
+| `{serviceUrl}/rest/ip_delete` | DELETE | Release an IP address |
+| `{serviceUrl}/rest/dns_rr_add` | POST | Create a DNS resource record |
+| `{serviceUrl}/rest/dns_rr_delete` | DELETE | Delete a DNS resource record |
+| `{serviceUrl}/rest/ip_list` | GET | List IP addresses in a subnet |
+| `{serviceUrl}/rest/subnet_list` | GET | List subnets/pools |
