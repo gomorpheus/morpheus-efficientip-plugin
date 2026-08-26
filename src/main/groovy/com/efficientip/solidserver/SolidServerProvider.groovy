@@ -1139,9 +1139,11 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
         def apiPath = "/rest/${listService}"
         def hasMore = true
         def maxResults = opts.maxResults ?: 100
+        def maxPageRetries = opts.maxPageRetries != null ? opts.maxPageRetries as Integer : 3
         rtn.data = []
         Integer offset = 0
         def attempt = 0
+        def pageRetryCount = 0
         while(hasMore && attempt < 1000) {
             Map<String,String> pageQuery = [limit:maxResults.toString(),offset:offset.toString()] + (opts?.queryParams ?: [:])
             //load results
@@ -1149,6 +1151,7 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                     contentType: ContentType.APPLICATION_JSON, ignoreSSL: poolServer.ignoreSsl), 'GET')
             log.debug("listNetworkSubnets results: ${results.toMap()}")
             if(results?.success && !results?.hasErrors()) {
+                pageRetryCount = 0
                 rtn.success = true
                 rtn.headers = results.headers
                 def pageResults = results.data
@@ -1170,10 +1173,18 @@ class SolidServerProvider implements IPAMProvider, DNSProvider {
                     hasMore = false
                 }
             } else {
-                if(!rtn.success) {
-                    rtn.success = false
-                    rtn.msg = results.error
+                // Retry a failed page a few times (transient blips/rate limiting) before giving up.
+                if(pageRetryCount < maxPageRetries) {
+                    pageRetryCount++
+                    log.warn("listObjects: page fetch failed for ${listService} at offset ${offset} (retry ${pageRetryCount}/${maxPageRetries}): ${results?.error}")
+                    Thread.sleep(1000L * pageRetryCount)
+                    attempt++
+                    continue
                 }
+                // Unconditionally fail once retries are exhausted, even if earlier pages succeeded,
+                // so callers (e.g. cacheNetworks) don't treat a partial list as complete.
+                rtn.success = false
+                rtn.msg = results?.error
                 hasMore = false
             }
             attempt++
